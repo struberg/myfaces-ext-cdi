@@ -37,6 +37,20 @@ import javax.faces.context.FacesContext;
  * <p>In case a JSF runtime is not available (e.g. in unit tests) we do all the
  * determining ourself (but in the same way as MyFaces does it!)</p>
  *
+ * <p>Usage:</p>
+ * Simply inject the current ProjectStage into any bean:
+ * <pre>
+ * public class MyBean {
+ *   private @Inject ProjectStage projectStage;
+ *
+ *   public void fn() {
+ *     if(projectStage == ProjectStage.Production) {
+ *        // do some prodution stuff...
+ *     }
+ *   }
+ * }
+ * </pre>
+ *
  * @author <a href="mailto:struberg@yahoo.de">Mark Struberg</a>
  */
 public class ProjectStageProducer {
