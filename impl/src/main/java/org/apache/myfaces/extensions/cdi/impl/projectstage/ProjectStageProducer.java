@@ -55,10 +55,11 @@ import javax.faces.context.FacesContext;
  */
 public class ProjectStageProducer {
 
+    /** JNDI path for the ProjectStage */
     public final static String PROJECT_STAGE_JNDI_NAME = "java:comp/env/jsf/ProjectStage";
 
-    // MyFaces specific System Property to set the ProjectStage, if not present via the standard way
-    public final static String MYFACES_PROJECT_STAGE_SYSTEM_PROPERTY_NAME = "org.apache.myfaces.PROJECT_STAGE";
+    /** System Property to set the ProjectStage, if not present via the standard way */
+    public final static String MYFACES_PROJECT_STAGE_SYSTEM_PROPERTY_NAME = "faces.PROJECT_STAGE";
 
 
     private static final Log log = LogFactory.getLog(ProjectStageProducer.class);
