@@ -1,4 +1,3 @@
-package org.apache.myfaces.extensions.cdi.impl.projectstage;
 /*
 * Licensed to the Apache Software Foundation (ASF) under one
 * or more contributor license agreements. See the NOTICE file
@@ -17,6 +16,7 @@ package org.apache.myfaces.extensions.cdi.impl.projectstage;
 * specific language governing permissions and limitations
 * under the License.
 */
+package org.apache.myfaces.extensions.cdi.impl.projectstage;
 
 import javax.enterprise.event.Observes;
 import javax.enterprise.inject.spi.Extension;
