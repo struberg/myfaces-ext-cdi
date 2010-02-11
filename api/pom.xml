@@ -50,6 +50,14 @@
             <artifactId>myfaces-api</artifactId>
             <version>${myfaces-version}</version>
         </dependency>
+        
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <classifier>jdk15</classifier>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 </project>

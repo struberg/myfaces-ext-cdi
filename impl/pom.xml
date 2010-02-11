@@ -66,6 +66,14 @@
             <artifactId>myfaces-impl</artifactId>
             <scope>test</scope>
         </dependency>
+        
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <classifier>jdk15</classifier>
+            <scope>test</scope>
+        </dependency>
 
     </dependencies>
 
