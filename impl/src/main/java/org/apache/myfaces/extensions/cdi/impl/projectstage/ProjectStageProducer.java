@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.Dependent;
+import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Default;
 import javax.enterprise.inject.Produces;
 import javax.faces.application.Application;
@@ -54,6 +55,7 @@ import javax.faces.context.FacesContext;
  *
  * @author <a href="mailto:struberg@yahoo.de">Mark Struberg</a>
  */
+@ApplicationScoped
 public class ProjectStageProducer {
 
     /** JNDI path for the ProjectStage */
@@ -65,7 +67,7 @@ public class ProjectStageProducer {
 
     private static final Log log = LogFactory.getLog(ProjectStageProducer.class);
 
-    private ProjectStage projectStage;
+    private static ProjectStage projectStage;
 
     /**
      * We can only produce @Dependent scopes since an enum is final.
@@ -79,10 +81,10 @@ public class ProjectStageProducer {
     /**
      * This function can be used to manually set the ProjectStage for the application.
      * This is e.g. useful in unit tests.
-     * @param projectStage the ProjectStage to set
+     * @param ps the ProjectStage to set
      */
-    public void setProjectStage(ProjectStage projectStage) {
-        this.projectStage = projectStage;
+    public static void setProjectStage(ProjectStage ps) {
+        projectStage = ps;
     }
 
     /**
@@ -92,8 +94,10 @@ public class ProjectStageProducer {
     @PostConstruct
     public void determineProjectStage() {
         try {
-            projectStage = getProjectStageFromJsf();
-
+            if (projectStage == null) {
+                projectStage = getProjectStageFromJsf();
+            }
+            
             if (projectStage == null) {
                 projectStage = getProjectStageFromEnvironment();
             }

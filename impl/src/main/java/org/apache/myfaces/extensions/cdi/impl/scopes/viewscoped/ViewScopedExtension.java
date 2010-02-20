@@ -18,12 +18,15 @@
  */
 package org.apache.myfaces.extensions.cdi.impl.scopes.viewscoped;
 
+import org.apache.myfaces.extensions.cdi.impl.projectstage.ProjectStageProducer;
+
 import javax.enterprise.context.NormalScope;
 import javax.enterprise.context.spi.Context;
 import javax.enterprise.event.Observes;
 import javax.enterprise.inject.spi.AfterBeanDiscovery;
 import javax.enterprise.inject.spi.BeforeBeanDiscovery;
 import javax.enterprise.inject.spi.Extension;
+import javax.faces.application.ProjectStage;
 import javax.faces.bean.ViewScoped;
 
 
@@ -40,6 +43,10 @@ import javax.faces.bean.ViewScoped;
  * ViewScoped. The {@link ViewScopedContext} is responsible for actually storing all our
  * &#064;ViewScoped contextual instances in the JSF ViewMap.</li>
  * </ol>
+ *
+ * <p>The extension automatically detects if we are in the
+ * {@link ProjectStage#UnitTest} and uses
+ * </p>
  * @author <a href="mailto:struberg@yahoo.de">Mark Struberg</a>
  */
 public class ViewScopedExtension implements Extension {
@@ -51,7 +58,20 @@ public class ViewScopedExtension implements Extension {
     
     public void registerViewContext(@Observes AfterBeanDiscovery afterBeanDiscovery)
     {
-        afterBeanDiscovery.addContext(new ViewScopedContext());
+        // we need to do this manually because there is no dependency injection in place
+        // at this time
+        ProjectStageProducer psp = new ProjectStageProducer();
+        psp.determineProjectStage();
+        ProjectStage projectStage = psp.getProjectStage();
+
+        if (projectStage == ProjectStage.UnitTest) {
+            // for unit tests, we use the mock context
+            afterBeanDiscovery.addContext(new MockViewScopedContext());
+        }
+        else {
+            // otherwise we use the real JSF ViewMap context
+            afterBeanDiscovery.addContext(new ViewScopedContext());
+        }
     }
 
 }
