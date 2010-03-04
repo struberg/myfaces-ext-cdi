@@ -34,3 +34,6 @@
 
 # support for @javax.faces.bean.ViewScoped
 # org.apache.myfaces.extensions.cdi.impl.scopes.viewscoped.ViewScopedExtension
+
+# myfaces-codi BeanManager provider
+#org.apache.myfaces.extensions.cdi.api.manager.BeanManagerProvider;
