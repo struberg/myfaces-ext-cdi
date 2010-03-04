@@ -43,7 +43,7 @@ public class BeanManagerProvider implements Extension {
      * Singleton accessor
      * @return the singleton BeanManagerProvider
      */
-    private static BeanManagerProvider getInstance() {
+    public static BeanManagerProvider getInstance() {
         return bmp;
     }
 
