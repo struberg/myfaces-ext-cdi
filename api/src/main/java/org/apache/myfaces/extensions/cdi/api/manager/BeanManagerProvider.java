@@ -65,6 +65,7 @@ public class BeanManagerProvider implements Extension {
      */
     public void setBeanManager(@Observes AfterBeanDiscovery abd, BeanManager beanManager) {
         bm = beanManager;
+        bmp = this;
     }
 
 }
