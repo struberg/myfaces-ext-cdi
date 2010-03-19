@@ -30,6 +30,9 @@ import javax.enterprise.inject.Produces;
 import javax.faces.application.Application;
 import javax.faces.application.ProjectStage;
 import javax.faces.context.FacesContext;
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 
 /**
  * <p>Produces {@link ProjectStage} configurations.</p>
@@ -99,6 +102,10 @@ public class ProjectStageProducer {
             }
             
             if (projectStage == null) {
+                projectStage = getProjectStageFromJNDI();
+            }
+
+            if (projectStage == null) {
                 projectStage = getProjectStageFromEnvironment();
             }
 
@@ -136,6 +143,34 @@ public class ProjectStageProducer {
             return ProjectStage.valueOf(stageName);
         }
         return null;
+    }
+
+    protected ProjectStage getProjectStageFromJNDI() {
+        ProjectStage ps = null;
+        String stageName = null;
+        try {
+            Context ctx = new InitialContext();
+            Object temp = ctx.lookup(ProjectStage.PROJECT_STAGE_JNDI_NAME);
+            if (temp != null) {
+                if (temp instanceof String) {
+                    stageName = (String) temp;
+                }
+                else {
+                    log.error("JNDI lookup for key " + ProjectStage.PROJECT_STAGE_JNDI_NAME
+                            + " should return a java.lang.String value");
+                    return null;
+                }
+            }
+        }
+        catch (NamingException e) {
+            // no-op
+        }
+
+        if (stageName != null) {
+            ps = ProjectStage.valueOf(stageName);
+        }
+
+        return ps;
     }
 
 }
