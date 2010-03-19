@@ -87,7 +87,6 @@ public class ViewScopedContext implements Context, SystemEventListener
 
         if(componentInstanceMap == null) 
         {
-            // TODO we now need to start being carefull with reentrancy...
             componentInstanceMap = new ConcurrentHashMap<Contextual<?>, Object>();
             viewMap.put(COMPONENT_MAP_NAME, componentInstanceMap); 
         }
@@ -96,7 +95,6 @@ public class ViewScopedContext implements Context, SystemEventListener
         ConcurrentHashMap<Contextual<?>, CreationalContext<?>> creationalContextMap = (ConcurrentHashMap<Contextual<?>, CreationalContext<?>>) viewMap.get(CREATIONAL_MAP_NAME);
         if(creationalContextMap == null) 
         {
-            // TODO we now need to start being carefull with reentrancy...
             creationalContextMap = new ConcurrentHashMap<Contextual<?>, CreationalContext<?>>();
             viewMap.put(CREATIONAL_MAP_NAME, creationalContextMap); 
         }
@@ -112,24 +110,13 @@ public class ViewScopedContext implements Context, SystemEventListener
         {
             return null;
         }
-        
-        synchronized (componentInstanceMap)
-        {
-            // just to make sure...
-            @SuppressWarnings("unchecked")
-            T i = (T)componentInstanceMap.get(component);
-            if (i != null)
-            {
-                return i;
-            }
-            
-            instance = component.create(creationalContext);
 
-            if (instance != null)
-            {
-                componentInstanceMap.put(component, instance);
-                creationalContextMap.put(component, creationalContext);
-            }
+        instance = component.create(creationalContext);
+
+        if (instance != null)
+        {
+            componentInstanceMap.put(component, instance);
+            creationalContextMap.put(component, creationalContext);
         }
 
         return  instance;
