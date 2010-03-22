@@ -40,9 +40,36 @@ import java.util.ServiceLoader;
  * </ul>
  *
  * <p>Adding a new ProjectStage is done via the
- * {@link java.util.ServiceLoader} mechanism.
- * A ProjectStage need to implement the </p>
+ * {@link java.util.ServiceLoader} mechanism.</p>
  *
+ * <p>Custom ProjectStages can be implemented by writing anonymous ProjectStage
+ * members into a registered {@link ProjectStageHolder} as shown in the following
+ * sample:</p>
+ * <pre>
+ * package org.apache.myfaces.extensions.cdi.test.api.projectstage;
+ * public class MyProjectStages implements ProjectStageHolder
+ * {
+ *    public static final ProjectStage MyOwnProjectStage = new ProjectStage("MyOwnProjectStage") {};
+ *    public static final ProjectStage MyOtherProjectStage = new ProjectStage("MyOtherProjectStage") {};
+  * }
+ * </pre>
+ * <p>For activating those projectstages, you have to register this ProjectStageHolder class
+ * to get picked up via the java.util.ServiceLoader mechanism. Simply create a file
+ * <pre>
+ * META-INF/services/org.apache.myfaces.extensions.cdi.api.projectstage.ProjectStageHolder
+ * </pre>
+ * which contains the fully qualified class name of custom ProjectStageHolder implementation:
+ * <pre>
+ * # this class now get's picked up by java.util.ServiceLoader
+ * org.apache.myfaces.extensions.cdi.test.api.projectstage.MyProjectStages
+ * </pre>
+ * </p>
+ * <p>You can use your own ProjectStages exactly the same way as all the ones provided
+ * by the system:
+ * <pre>
+ * ProjectStage myOwnPs = ProjectStage.valueOf("MyOwnProjectStage");
+   if (myOwnPs.equals(MyOwnProjectStage.MyOwnProjectStage)) ... 
+ * </pre>
  *
  * <a href="mailto:struberg@yahoo.de">Mark Struberg</a>
  */
@@ -68,7 +95,9 @@ public abstract class ProjectStage implements Serializable
 
     
     /**
-     * The static initializer block will register all ProjectStages
+     * The static initializer block will register all custom ProjectStages
+     * by simply touching their classes due loding it with the
+     * {@link java.util.ServiceLoader}.
      */
     static
     {
