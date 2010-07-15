@@ -47,6 +47,22 @@
                 </h:panelGrid>
             </h:form>
 
+            <h:form id="conversationForm">
+                <h:panelGrid>
+                    <h:commandLink value="next" action="next"/>
+                    <h:commandLink value="end conversation group 1" action="#{conversationDemoBean1.endGroup1}"/>
+                    <h:commandLink value="end conversation of bean" action="#{conversationDemoBean1.endConversation}"/>
+                </h:panelGrid>
+            </h:form>
+            
+            <h:panelGrid>
+                <h:outputText value="#{conversationDemoBean1.value}"/>
+                <h:outputText value="#{conversationDemoBean2.value}"/>
+                <h:outputText value="#{conversationDemoBean3.value}"/>
+                <h:outputText value="#{conversationDemoBean4.value}"/>
+                <h:outputText value="#{currentWindowContext.id}"/>
+            </h:panelGrid>
+
             <h:messages globalOnly="true" infoStyle="color: blue;" warnStyle="color: orange;" errorStyle="color: red;" fatalStyle="color:darkred;"/>
         </f:view>
     </body>

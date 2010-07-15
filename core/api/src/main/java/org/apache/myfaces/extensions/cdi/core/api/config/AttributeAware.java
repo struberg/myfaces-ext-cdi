@@ -18,10 +18,12 @@
  */
 package org.apache.myfaces.extensions.cdi.core.api.config;
 
+import java.io.Serializable;
+
 /**
  * @author Gerhard Petracek
  */
-public interface AttributeAware
+public interface AttributeAware extends Serializable
 {
     boolean setAttribute(String name, Object value);
 

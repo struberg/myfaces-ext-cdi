@@ -61,8 +61,8 @@
     <inceptionYear>2008</inceptionYear>
 
     <properties>
-        <owb.version>1.0.0-SNAPSHOT</owb.version>
-        <myfaces.version>2.0.0-SNAPSHOT</myfaces.version>
+        <owb.version>1.0.0-alpha-1</owb.version>
+        <myfaces.version>2.0.1-SNAPSHOT</myfaces.version>
     </properties>
 
     <dependencyManagement>
@@ -76,12 +76,12 @@
             <dependency>
                 <groupId>org.apache.geronimo.specs</groupId>
                 <artifactId>geronimo-jcdi_1.0_spec</artifactId>
-                <version>1.0-beta</version>
+                <version>1.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.geronimo.specs</groupId>
                 <artifactId>geronimo-interceptor_1.1_spec</artifactId>
-                <version>1.0.0-beta</version>
+                <version>1.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.openwebbeans</groupId>
@@ -203,6 +203,7 @@
                 <groupId>org.apache.geronimo.specs</groupId>
                 <artifactId>geronimo-validation_1.0_spec</artifactId>
                 <version>1.0</version>
+                <scope>provided</scope>
             </dependency>
 
             <!-- TODO -->
@@ -210,6 +211,7 @@
                 <groupId>javax.validation</groupId>
                 <artifactId>validation-api</artifactId>
                 <version>1.0.0.GA</version>
+                <scope>provided</scope>
             </dependency>
 
         </dependencies>
@@ -229,7 +231,7 @@
         <dependency>
             <groupId>org.apache.geronimo.specs</groupId>
             <artifactId>geronimo-jcdi_1.0_spec</artifactId>
-            <version>1.0-beta</version>
+            <version>1.0</version>
             <scope>provided</scope>
         </dependency>
 
@@ -237,7 +239,7 @@
         <dependency>
             <groupId>org.apache.geronimo.specs</groupId>
             <artifactId>geronimo-interceptor_1.1_spec</artifactId>
-            <version>1.0.0-beta</version>
+            <version>1.0</version>
             <scope>provided</scope>
         </dependency>
 
@@ -254,20 +256,6 @@
 
 
     <build>
-        <resources>
-            <resource>
-                <directory>${basedir}</directory>
-                <targetPath>META-INF</targetPath>
-                <includes>
-                    <include>NOTICE.txt</include>
-                    <include>LICENSE.txt</include>
-                </includes>
-            </resource>
-            <resource>
-                <directory>${basedir}/src/main/resources</directory>
-            </resource>
-        </resources>
-
         <pluginManagement>
             <plugins>
                 <plugin>

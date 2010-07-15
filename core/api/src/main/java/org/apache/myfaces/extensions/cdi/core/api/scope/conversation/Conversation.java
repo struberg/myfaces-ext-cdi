@@ -21,14 +21,32 @@ package org.apache.myfaces.extensions.cdi.core.api.scope.conversation;
 import java.io.Serializable;
 
 /**
+ * The central interface for a conversation which is a container for 1-n beans
+ * (which share the same time for destruction).
  * A conversation is started automatically with the first access
- * 
+ *
  * @author Gerhard Petracek
  */
 public interface Conversation extends Serializable
 {
+    /**
+     * Deactivates the conversation and un-scopes all bean instances immediately.<br/>
+     * At the next cleanup the whole conversation will be destroyed.
+     * (If an inactive {@link org.apache.myfaces.extensions.cdi.core.api.scope.conversation.Conversation}
+     * gets resolved before the cleanup, the
+     * {@link org.apache.myfaces.extensions.cdi.core.api.scope.conversation.WindowContext} has to destroy it.
+     * -> A new conversation will be created immediately.
+     */
     void end();
 
+    /**
+     * Un-scopes all bean instances immediately.
+     * Instead of destroying the whole conversation the conversation stays active.
+     * (The conversation will be marked as used.)<br/>
+     * As soon as an instance of a bean is requested,
+     * the instance will be created based on the original bean descriptor.
+     * This approach allows a better performance, if the conversation is needed immediately.
+     */
     void restart();
 }
 

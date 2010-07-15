@@ -28,7 +28,7 @@ import javax.faces.FacesException;
  */
 public class CodiFacesContextFactory extends FacesContextFactory
 {
-    private FacesContextFactory wrappedFacesContextFactory;
+    protected final FacesContextFactory wrappedFacesContextFactory;
 
     public CodiFacesContextFactory(FacesContextFactory wrappedFacesContextFactory)
     {
@@ -48,6 +48,15 @@ public class CodiFacesContextFactory extends FacesContextFactory
             return null;
         }
 
+        return new CodiFacesContextWrapper(facesContext);
+    }
+
+    public static FacesContext wrapFacesContext(FacesContext facesContext)
+    {
+        if(facesContext instanceof CodiFacesContextWrapper)
+        {
+            return facesContext;
+        }
         return new CodiFacesContextWrapper(facesContext);
     }
 }

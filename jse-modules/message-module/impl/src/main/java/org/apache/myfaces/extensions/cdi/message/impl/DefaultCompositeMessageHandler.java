@@ -48,7 +48,6 @@ class DefaultCompositeMessageHandler implements CompositeMessageHandler, Seriali
         }
     }
 
-
     public void addMessage(MessageContext messageContext, Message message)
     {
         for (MessageHandler messageHandler : this.messageHandlers)

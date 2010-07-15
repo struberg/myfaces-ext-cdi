@@ -29,7 +29,7 @@ class DefaultMessageFactory implements MessageFactory
 {
     private static final long serialVersionUID = 721557343207858857L;
 
-    public Message create(String messageDescriptor, Class<? extends MessagePayload> messagePayload)
+    public Message create(String messageDescriptor, MessagePayload messagePayload)
     {
         return new DefaultMessage(messageDescriptor, messagePayload);
     }
