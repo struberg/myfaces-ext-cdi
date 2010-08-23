@@ -30,18 +30,53 @@ public interface ConfigParameter
 
     static final Boolean TRANSACTION_TOKEN_ENABLED_DEFAULT = Boolean.FALSE;
 
-    static final String GET_REQUEST_PARAMETER_ENABLED =
-            CoreCodiConfigParameter.BASE_NAME + "GET_REQUEST_PARAMETER_ENABLED";
+    static final String URL_PARAMETER_ENABLED =
+            CoreCodiConfigParameter.BASE_NAME + "URL_PARAMETER_ENABLED";
 
-    static final boolean GET_REQUEST_PARAMETER_ENABLED_DEFAULT = true;
+    static final boolean URL_PARAMETER_ENABLED_DEFAULT = false;
 
-    static final String GROUPED_CONVERSATION_TIMEOUT =
-            CoreCodiConfigParameter.BASE_NAME + "GROUPED_CONVERSATION_TIMEOUT";
+    static final String ALLOW_UNKNOWN_WINDOW_IDS =
+            CoreCodiConfigParameter.BASE_NAME + "ALLOW_UNKNOWN_WINDOW_IDS";
 
-    static final int GROUPED_CONVERSATION_TIMEOUT_DEFAULT = 30;
+    static final boolean ALLOW_UNKNOWN_WINDOW_IDS_DEFAULT = true;
+
+    static final String ADD_WINDOW_ID_TO_ACTION_URL_ENABLED =
+            CoreCodiConfigParameter.BASE_NAME + "ADD_WINDOW_ID_TO_ACTION_URL_ENABLED";
+
+    static final boolean ADD_WINDOW_ID_TO_ACTION_URL_ENABLED_DEFAULT = true;
+
+    static final String DISABLE_INITIAL_REDIRECT =
+            CoreCodiConfigParameter.BASE_NAME + "DISABLE_INITIAL_REDIRECT";
+
+    static final boolean DISABLE_INITIAL_REDIRECT_DEFAULT = true;
+
+    static final String CONVERSATION_TIMEOUT =
+            CoreCodiConfigParameter.BASE_NAME + "CONVERSATION_TIMEOUT";
+
+    static final int CONVERSATION_TIMEOUT_DEFAULT = 30;
 
     static final String WINDOW_CONTEXT_TIMEOUT =
             CoreCodiConfigParameter.BASE_NAME + "WINDOW_CONTEXT_TIMEOUT";
 
     static final int WINDOW_CONTEXT_TIMEOUT_DEFAULT = 60;
+
+    static final String MAX_WINDOW_CONTEXT_COUNT =
+            CoreCodiConfigParameter.BASE_NAME + "MAX_WINDOW_CONTEXT_COUNT";
+
+    static final int MAX_WINDOW_CONTEXT_COUNT_DEFAULT = 128;
+
+    static final String ENABLE_SCOPE_BEAN_EVENT =
+            CoreCodiConfigParameter.BASE_NAME + "ENABLE_SCOPE_BEAN_EVENT";
+
+    static final boolean ENABLE_SCOPE_BEAN_EVENT_DEFAULT = false;
+
+    static final String ENABLE_BEAN_ACCESS_EVENT =
+            CoreCodiConfigParameter.BASE_NAME + "ENABLE_BEAN_ACCESS_EVENT";
+
+    static final boolean ENABLE_BEAN_ACCESS_EVENT_DEFAULT = false;
+
+    static final String ENABLE_UNSCOPE_BEAN_EVENT =
+            CoreCodiConfigParameter.BASE_NAME + "ENABLE_UNSCOPE_BEAN_EVENT";
+
+    static final boolean ENABLE_UNSCOPE_BEAN_EVENT_DEFAULT = false;
 }

@@ -37,4 +37,10 @@ public interface BeanEntry<T> extends Serializable
      * @return the old instance
      */
     T resetBeanInstance();
+
+    boolean isScopeBeanEventEnabled();
+
+    boolean isBeanAccessEventEnabled();
+
+    boolean isUnscopeBeanEventEnabled();
 }

@@ -20,6 +20,11 @@ package org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation;
 
 import static org.apache.myfaces.extensions.cdi.javaee.jsf.impl.util.ConversationUtils.*;
 
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.WindowHandler;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.JsfAwareWindowContextConfig;
+import org.apache.myfaces.extensions.cdi.core.impl.utils.CodiUtils;
+import org.apache.myfaces.extensions.cdi.core.api.resolver.ConfigResolver;
+
 import javax.faces.context.ExternalContext;
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,20 +44,57 @@ public class RedirectedConversationAwareExternalContext extends ExternalContext
 {
     private ExternalContext wrapped;
 
+    private WindowHandler windowHandler;
+
+    private boolean encodeActionURLs;
+
     public RedirectedConversationAwareExternalContext(ExternalContext wrapped)
     {
         this.wrapped = wrapped;
     }
 
+    public String encodeActionURL(String s)
+    {
+        lazyInit();
+
+        if(this.encodeActionURLs)
+        {
+            String url = addWindowIdToUrl(s);
+            return this.wrapped.encodeActionURL(url);
+        }
+        return this.wrapped.encodeActionURL(s);
+    }
+
+    public void redirect(String url)
+            throws IOException
+    {
+        lazyInit();
+        sendRedirect(this.wrapped, url, windowHandler);
+    }
+
+    private synchronized void lazyInit()
+    {
+        if(this.windowHandler == null)
+        {
+            this.windowHandler = getWindowHandler();
+            this.encodeActionURLs = CodiUtils
+                    .getOrCreateScopedInstanceOfBeanByClass(ConfigResolver.class)
+                    .resolve(JsfAwareWindowContextConfig.class).isAddWindowIdToActionUrlsEnabled();
+        }
+    }
+
+    private String addWindowIdToUrl(String url)
+    {
+        return this.windowHandler.encodeURL(url);
+    }
+
+    /*
+     * generated
+     */
     public void dispatch(String s)
             throws IOException
     {
         wrapped.dispatch(s);
-    }
-
-    public String encodeActionURL(String s)
-    {
-        return wrapped.encodeActionURL(s);
     }
 
     public String encodeNamespace(String s)
@@ -250,11 +292,5 @@ public class RedirectedConversationAwareExternalContext extends ExternalContext
     public void log(String s, Throwable throwable)
     {
         wrapped.log(s, throwable);
-    }
-
-    public void redirect(String url)
-            throws IOException
-    {
-        sendRedirect(this.wrapped, url);
     }
 }

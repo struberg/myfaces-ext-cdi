@@ -21,14 +21,19 @@ package org.apache.myfaces.extensions.cdi.javaee.jsf2.impl.scope.conversation;
 import static org.apache.myfaces.extensions.cdi.javaee.jsf2.impl.request.CodiFacesContextFactory.wrapFacesContext;
 import static org.apache.myfaces.extensions.cdi.javaee.jsf.impl.util.ConversationUtils.storeCurrentViewIdAsOldViewId;
 import static org.apache.myfaces.extensions.cdi.javaee.jsf.impl.util.ConversationUtils.storeCurrentViewIdAsNewViewId;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.util.JsfUtils;
 
 import javax.faces.application.NavigationHandler;
+import javax.faces.application.ConfigurableNavigationHandler;
+import javax.faces.application.NavigationCase;
 import javax.faces.context.FacesContext;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * @author Gerhard Petracek
  */
-public class AccessScopeAwareNavigationHandler extends NavigationHandler
+public class AccessScopeAwareNavigationHandler extends ConfigurableNavigationHandler 
 {
     private final NavigationHandler navigationHandler;
 
@@ -39,6 +44,9 @@ public class AccessScopeAwareNavigationHandler extends NavigationHandler
 
     public void handleNavigation(FacesContext facesContext, String s, String s1)
     {
+        //we have to reset it due to possible redirects
+        JsfUtils.resetCaches();
+
         //TODO check myfaces core - issue? facesContext is not wrapped here
         facesContext = wrapFacesContext(facesContext);
 
@@ -47,5 +55,23 @@ public class AccessScopeAwareNavigationHandler extends NavigationHandler
         this.navigationHandler.handleNavigation(facesContext, s, s1);
 
         storeCurrentViewIdAsNewViewId(facesContext);
+    }
+
+    public NavigationCase getNavigationCase(FacesContext context, String action, String outcome)
+    {
+        if(this.navigationHandler instanceof ConfigurableNavigationHandler)
+        {
+            return ((ConfigurableNavigationHandler)this.navigationHandler).getNavigationCase(context, action, outcome);
+        }
+        return null;
+    }
+
+    public Map<String, Set<NavigationCase>> getNavigationCases()
+    {
+        if(this.navigationHandler instanceof ConfigurableNavigationHandler)
+        {
+            return ((ConfigurableNavigationHandler)this.navigationHandler).getNavigationCases();
+        }
+        return null;
     }
 }

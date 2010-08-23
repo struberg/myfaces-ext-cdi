@@ -16,24 +16,17 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.myfaces.extensions.cdi.core.impl.scope.conversation.spi;
+package org.apache.myfaces.extensions.cdi.core.api.scope.conversation;
+
+import java.io.Serializable;
 
 /**
- * TODO
  * @author Gerhard Petracek
  */
-public interface EditableConversation
+public final class ScopeBeanEvent extends BeanEvent
 {
-    boolean isActive();
-
-    void deactivate();
-
-    <T> void addBean(BeanEntry<T> beanInstance);
-
-    /**
-     * @param key class of the requested bean
-     * @param <T> type of the requested bean
-     * @return an instance of the requested bean if the conversation is active - null otherwise
-     */
-    <T> T getBean(Class<T> key);
+    public ScopeBeanEvent(Serializable bean)
+    {
+        super(bean);
+    }
 }

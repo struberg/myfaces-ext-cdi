@@ -19,12 +19,18 @@
 package org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation;
 
 import org.apache.myfaces.extensions.cdi.core.api.scope.conversation.Conversation;
-import org.apache.myfaces.extensions.cdi.core.api.scope.conversation.WindowContext;
 import org.apache.myfaces.extensions.cdi.core.api.scope.conversation.WindowContextConfig;
-import org.apache.myfaces.extensions.cdi.core.impl.scope.conversation.spi.EditableConversation;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.EditableConversation;
 import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.EditableWindowContext;
 import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.ConversationKey;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.ConversationFactory;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.JsfAwareWindowContextConfig;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.util.RequestCache;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.util.JsfUtils;
+import static org.apache.myfaces.extensions.cdi.javaee.jsf.impl.util.ExceptionUtils.conversationNotEditableException;
 
+import javax.enterprise.inject.Typed;
+import java.util.Date;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
@@ -38,118 +44,186 @@ import java.lang.annotation.Annotation;
  *
  * @author Gerhard Petracek
  */
-public class JsfWindowContext implements WindowContext, EditableWindowContext
+@Typed()
+public class JsfWindowContext implements EditableWindowContext
 {
     private static final long serialVersionUID = 5272798129165017829L;
 
-    private final Long id;
+    private final String id;
 
-    private final WindowContextConfig config;
+    private final JsfAwareWindowContextConfig jsfAwareWindowContextConfig;
 
-    private Map<ConversationKey, Conversation> groupedConversations
-            = new ConcurrentHashMap<ConversationKey, Conversation>();
+    private final boolean projectStageDevelopment;
 
-    public JsfWindowContext(Long windowContextId, WindowContextConfig config)
+    private Map<ConversationKey, EditableConversation> groupedConversations
+            = new ConcurrentHashMap<ConversationKey, EditableConversation>();
+
+    private Map<String, Object> attributes = new ConcurrentHashMap<String, Object>();
+
+    private final TimeoutExpirationEvaluator expirationEvaluator;
+
+    protected JsfWindowContext(String windowContextId,
+                               JsfAwareWindowContextConfig jsfAwareWindowContextConfig,
+                               boolean projectStageDevelopment)
     {
         this.id = windowContextId;
-        this.config = config;
+        this.jsfAwareWindowContextConfig = jsfAwareWindowContextConfig;
+        this.expirationEvaluator = new TimeoutExpirationEvaluator(
+                this.jsfAwareWindowContextConfig.getWindowContextTimeoutInMinutes());
+
+        this.projectStageDevelopment = projectStageDevelopment;
     }
 
-    public Long getId()
+    public String getId()
     {
         return this.id;
     }
 
-    public synchronized void endConversations()
+    public void endConversations()
     {
-        for (Map.Entry<ConversationKey, Conversation> conversationEntry : this.groupedConversations.entrySet())
-        {
-            endAndRemoveConversation(conversationEntry.getKey(), conversationEntry.getValue());
-        }
+        endConversations(false);
     }
 
-    public Conversation getConversation(Class conversationGroupKey, Annotation... qualifiers)
+    public void end()
     {
-        ConversationKey conversationKey = new DefaultConversationKey(conversationGroupKey, qualifiers);
+        endConversations(true);
+        this.attributes.clear();
+    }
 
-        Conversation conversation = this.groupedConversations.get(conversationKey);
-
-        //TODO
-        if (conversation != null && !((EditableConversation)conversation).isActive())
+    public synchronized void endConversations(boolean forceEnd)
+    {
+        for (Map.Entry<ConversationKey, EditableConversation> conversationEntry : this.groupedConversations.entrySet())
         {
-            endAndRemoveConversation(conversationKey, conversation);
-            conversation = null;
+            endAndRemoveConversation(conversationEntry.getKey(), conversationEntry.getValue(), forceEnd);
         }
+        JsfUtils.resetConversationCache();
+    }
 
-        if (conversation == null)
+    public EditableConversation getConversation(Class conversationGroupKey, Annotation... qualifiers)
+    {
+        ConversationKey conversationKey =
+                new DefaultConversationKey(conversationGroupKey, this.projectStageDevelopment, qualifiers);
+
+        EditableConversation conversation = RequestCache.getConversation(conversationKey);
+
+        if(conversation == null)
         {
-            conversation = createConversation(conversationGroupKey, qualifiers);
-            this.groupedConversations.put(conversationKey, conversation);
+            conversation = this.groupedConversations.get(conversationKey);
+
+            //TODO
+            if (conversation != null && !conversation.isActive())
+            {
+                endAndRemoveConversation(conversationKey, conversation, true);
+                conversation = null;
+            }
+
+            if (conversation == null)
+            {
+                conversation = createConversation(conversationGroupKey, qualifiers);
+                this.groupedConversations.put(conversationKey, conversation);
+            }
+
+            RequestCache.setConversation(conversationKey, conversation);
         }
         return conversation;
     }
 
     public Conversation endConversation(Class conversationGroupKey, Annotation... qualifiers)
     {
-        ConversationKey conversationKey = new DefaultConversationKey(conversationGroupKey, qualifiers);
+        ConversationKey conversationKey =
+                new DefaultConversationKey(conversationGroupKey, this.projectStageDevelopment, qualifiers);
 
         Conversation conversation = this.groupedConversations.get(conversationKey);
-        return endAndRemoveConversation(conversationKey, conversation);
+
+        if(!(conversation instanceof EditableConversation))
+        {
+            throw conversationNotEditableException(conversation);
+        }
+        return endAndRemoveConversation(conversationKey, (EditableConversation)conversation, true);
     }
 
     public Set<Conversation> endConversationGroup(Class conversationGroupKey)
     {
         Set<Conversation> removedConversations = new HashSet<Conversation>();
-        for(Map.Entry<ConversationKey, Conversation> conversationEntry : this.groupedConversations.entrySet())
+        for(Map.Entry<ConversationKey, EditableConversation> conversationEntry : this.groupedConversations.entrySet())
         {
             if(conversationGroupKey.isAssignableFrom(conversationEntry.getKey().getConversationGroup()))
             {
                 removedConversations.add(
-                        endAndRemoveConversation(conversationEntry.getKey(), conversationEntry.getValue()));
+                        endAndRemoveConversation(conversationEntry.getKey(), conversationEntry.getValue(), true));
             }
         }
         return removedConversations;
     }
 
-    private Conversation endAndRemoveConversation(ConversationKey conversationKey, Conversation conversation)
+    private EditableConversation endAndRemoveConversation(ConversationKey conversationKey,
+                                                          EditableConversation conversation,
+                                                          boolean forceEnd)
     {
-        //TODO
-        if (((EditableConversation)conversation).isActive())
+        if (forceEnd)
         {
             conversation.end();
+            return this.groupedConversations.remove(conversationKey);
+        }
+        else if(conversation instanceof EditableConversation)
+        {
+            conversation.deactivate();
+
+            if(!conversation.isActive())
+            {
+                conversation.end();
+                return this.groupedConversations.remove(conversationKey);
+            }
         }
 
-        return this.groupedConversations.remove(conversationKey);
+        return null;
     }
 
-    public Conversation createConversation(Class conversationGroupKey, Annotation... qualifiers)
+    public EditableConversation createConversation(Class conversationGroupKey, Annotation... qualifiers)
     {
-        ConversationKey conversationKey = new DefaultConversationKey(conversationGroupKey, qualifiers);
+        ConversationKey conversationKey =
+                new DefaultConversationKey(conversationGroupKey, this.projectStageDevelopment, qualifiers);
 
-        return new DefaultConversation(conversationKey, this.config.getConversationTimeoutInMinutes());
+        ConversationFactory conversationFactory = this.jsfAwareWindowContextConfig.getConversationFactory();
+
+        return conversationFactory.createConversation(conversationKey, this.jsfAwareWindowContextConfig);
     }
 
-    public Map<ConversationKey /*conversation group*/, Conversation> getConversations()
+    public Map<ConversationKey /*conversation group*/, EditableConversation> getConversations()
     {
         return Collections.unmodifiableMap(this.groupedConversations);
     }
 
     public WindowContextConfig getConfig()
     {
-        return this.config;
+        return this.jsfAwareWindowContextConfig;
+    }
+
+    public boolean isActive()
+    {
+        return !this.expirationEvaluator.isExpired();
+    }
+
+    public Date getLastAccess()
+    {
+        return this.expirationEvaluator.getLastAccess();
+    }
+
+    public void touch()
+    {
+        this.expirationEvaluator.touch();
     }
 
     public void removeInactiveConversations()
     {
-        Iterator<Conversation> conversations = this.groupedConversations.values().iterator();
+        Iterator<EditableConversation> conversations = this.groupedConversations.values().iterator();
 
-        Conversation conversation;
+        EditableConversation conversation;
         while (conversations.hasNext())
         {
             conversation = conversations.next();
 
-            //TODO
-            if (!((EditableConversation)conversation).isActive())
+            if (!conversation.getActiveState())
             {
                 conversations.remove();
             }
@@ -158,21 +232,27 @@ public class JsfWindowContext implements WindowContext, EditableWindowContext
 
     public boolean setAttribute(String name, Object value)
     {
-        throw new IllegalStateException("not implemented");
+        return setAttribute(name, value, true);
     }
 
     public boolean setAttribute(String name, Object value, boolean forceOverride)
     {
-        throw new IllegalStateException("not implemented");
+        if(value == null || (!forceOverride && containsAttribute(name)))
+        {
+            return false;
+        }
+        this.attributes.put(name, value);
+        return true;
     }
 
     public boolean containsAttribute(String name)
     {
-        throw new IllegalStateException("not implemented");
+        return this.attributes.containsKey(name);
     }
 
     public <T> T getAttribute(String name, Class<T> targetType)
     {
-        throw new IllegalStateException("not implemented");
+        //noinspection unchecked
+        return (T)this.attributes.get(name);
     }
 }

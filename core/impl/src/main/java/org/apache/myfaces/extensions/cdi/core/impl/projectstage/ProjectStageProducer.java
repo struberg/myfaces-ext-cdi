@@ -57,7 +57,7 @@ import java.util.logging.Logger;
  * }
  * </pre>
  *
- * @author <a href="mailto:struberg@yahoo.de">Mark Struberg</a>
+ * TODO move jsf specific parts
  */
 @ApplicationScoped
 public class ProjectStageProducer

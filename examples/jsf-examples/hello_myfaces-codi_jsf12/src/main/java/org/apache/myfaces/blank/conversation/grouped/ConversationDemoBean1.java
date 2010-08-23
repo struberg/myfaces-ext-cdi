@@ -22,6 +22,7 @@ import org.apache.myfaces.extensions.cdi.core.api.scope.conversation.Conversatio
 import org.apache.myfaces.extensions.cdi.core.api.scope.conversation.ConversationGroup;
 import org.apache.myfaces.extensions.cdi.core.api.scope.conversation.WindowContext;
 import org.apache.myfaces.extensions.cdi.core.api.scope.conversation.Conversation;
+import org.apache.myfaces.blank.view.DemoPages;
 
 import javax.inject.Named;
 import javax.inject.Inject;
@@ -53,15 +54,22 @@ public class ConversationDemoBean1 implements Serializable
         this.createdAt = new Date();
     }
 
-    public void endGroup1()
+    public String next()
     {
-        this.windowContext.endConversationGroup(ConversationGroup1.class);
+        return DemoPages.HelloMyFacesCodi1.class.getName();
     }
 
-    public void endConversation()
+    public String endGroup1()
+    {
+        this.windowContext.endConversationGroup(ConversationGroup1.class);
+        return null;
+    }
+
+    public String endConversation()
     {
         //this.conversation.end();
         this.conversation.restart();
+        return null;
     }
 
     public String getValue()

@@ -16,39 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation;
-
-import java.util.UUID;
+package org.apache.myfaces.extensions.cdi.core.api.view.definition;
 
 /**
- * TODO
  * @author Gerhard Petracek
  */
-public class UuidEntry
+public final class ManualView implements ViewDefinition
 {
-    private final String uuid;
-    private final long windowContextId;
-    private final String viewId;
-
-    public UuidEntry(long windowContextId, String viewId)
-    {
-        this.uuid = UUID.randomUUID().toString().replace("-", "");
-        this.viewId = viewId;
-        this.windowContextId = windowContextId;
-    }
-
-    public String getUuid()
-    {
-        return uuid;
-    }
-
-    public long getWindowContextId()
-    {
-        return windowContextId;
-    }
-
-    public String getViewId()
-    {
-        return viewId;
-    }
 }

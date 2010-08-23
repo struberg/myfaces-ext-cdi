@@ -16,25 +16,29 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.myfaces.extensions.cdi.javaee.jsf2.impl.request;
+package org.apache.myfaces.extensions.cdi.javaee.jsf2.impl.config;
 
-import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.request.DefaultRequestTypeResolver;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.WindowHandler;
+import org.apache.myfaces.extensions.cdi.javaee.jsf2.impl.scope.conversation.ServerSideWindowHandler;
 
-import javax.enterprise.inject.spi.Extension;
-import javax.enterprise.inject.spi.ProcessAnnotatedType;
-import javax.enterprise.event.Observes;
+import javax.enterprise.context.ApplicationScoped;
 
 /**
  * @author Gerhard Petracek
  */
-public class RequestTypeResolverExtension implements Extension
+@ApplicationScoped
+@SuppressWarnings({"UnusedDeclaration"})
+public class DefaultWindowContextConfig extends
+        org.apache.myfaces.extensions.cdi.javaee.jsf.impl.config.DefaultWindowContextConfig
 {
-    public void filterJsfPhaseListeners(@Observes ProcessAnnotatedType processAnnotatedType)
+    private static final long serialVersionUID = 5184658265260290647L;
+
+    @Override
+    public WindowHandler getWindowHandler()
     {
-        if(DefaultRequestTypeResolver.class.isAssignableFrom(processAnnotatedType.getAnnotatedType().getJavaClass()))
+        return new ServerSideWindowHandler(isUrlParameterSupported())
         {
-            //veto the RequestTypeResolver for jsf 1.2
-            processAnnotatedType.veto();
-        }
+            private static final long serialVersionUID = -9034142203391043297L;
+        };
     }
 }

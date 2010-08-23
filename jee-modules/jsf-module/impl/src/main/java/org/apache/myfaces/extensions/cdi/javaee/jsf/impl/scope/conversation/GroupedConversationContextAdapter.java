@@ -19,12 +19,20 @@
 package org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation;
 
 import org.apache.myfaces.extensions.cdi.core.api.scope.conversation.Conversation;
+import org.apache.myfaces.extensions.cdi.core.api.scope.conversation.ConversationConfig;
+import org.apache.myfaces.extensions.cdi.core.api.resolver.ConfigResolver;
 import org.apache.myfaces.extensions.cdi.core.impl.scope.conversation.AbstractConversationContextAdapter;
-import org.apache.myfaces.extensions.cdi.core.impl.scope.conversation.spi.BeanEntry;
-import org.apache.myfaces.extensions.cdi.core.impl.scope.conversation.spi.EditableConversation;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.EditableConversation;
 import org.apache.myfaces.extensions.cdi.core.impl.scope.conversation.spi.WindowContextManager;
+import org.apache.myfaces.extensions.cdi.core.impl.scope.conversation.spi.BeanEntry;
+import static org.apache.myfaces.extensions.cdi.core.impl.utils.CodiUtils.getOrCreateScopedInstanceOfBeanByClass;
 import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.util.ConversationUtils;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.util.RequestCache;
+import static org.apache.myfaces.extensions.cdi.javaee.jsf.impl.util.ExceptionUtils
+        .windowContextManagerNotEditableException;
 import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.EditableWindowContext;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.JsfAwareWindowContextConfig;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.EditableWindowContextManager;
 
 import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeanManager;
@@ -54,43 +62,53 @@ class GroupedConversationContextAdapter extends AbstractConversationContextAdapt
         return FacesContext.getCurrentInstance().getExternalContext().getSession(false) != null;
     }
 
-    /**
-     * @return the descriptor of a custom
-     * {@link org.apache.myfaces.extensions.cdi.core.impl.scope.conversation.spi.WindowContextManager}
-     * with the qualifier {@link org.apache.myfaces.extensions.cdi.javaee.jsf.api.qualifier.Jsf} or
-     *         the descriptor of the default implementation provided by this module
-     */
-    protected Bean<WindowContextManager> resolveWindowContextManagerBean()
+    protected WindowContextManager resolveWindowContextManager()
     {
-        return ConversationUtils.resolveConversationManagerBean();
+        return RequestCache.getWindowContextManager();
     }
 
     /**
-     * @param conversationManager the current
+     * @param windowContextManager the current
      * {@link org.apache.myfaces.extensions.cdi.core.impl.scope.conversation.spi.WindowContextManager}
      * @param beanDescriptor      descriptor of the requested bean
      * @return the instance of the requested bean if it exists in the current
      *         {@link org.apache.myfaces.extensions.cdi.core.api.scope.conversation.WindowContext}
      *         null otherwise
      */
-    protected <T> T resolveBeanInstance(WindowContextManager conversationManager, Bean<T> beanDescriptor)
+    protected <T> T resolveBeanInstance(WindowContextManager windowContextManager, Bean<T> beanDescriptor)
     {
+        if(!(windowContextManager instanceof EditableWindowContextManager))
+        {
+            throw windowContextManagerNotEditableException(windowContextManager);
+        }
+
         Class<?> beanClass = beanDescriptor.getBeanClass();
-        Conversation foundConversation = getConversation(conversationManager, beanDescriptor);
+        EditableConversation foundConversation = getConversation(
+                (EditableWindowContextManager)windowContextManager, beanDescriptor);
 
         //noinspection unchecked
-        return (T)((EditableConversation)foundConversation).getBean(beanClass);
+        return (T)foundConversation.getBean(beanClass);
     }
 
-    protected <T> void scopeBeanEntry(WindowContextManager conversationManager, BeanEntry<T> beanEntry)
+    protected <T> void scopeBeanEntry(WindowContextManager windowContextManager, BeanEntry<T> beanEntry)
     {
+        if(!(windowContextManager instanceof EditableWindowContextManager))
+        {
+            throw windowContextManagerNotEditableException(windowContextManager);
+        }
+
         Bean<?> bean = beanEntry.getBean();
-        Conversation foundConversation = getConversation(conversationManager, bean);
+        Conversation foundConversation = getConversation((EditableWindowContextManager)windowContextManager, bean);
 
         ((EditableConversation) foundConversation).addBean(beanEntry);
     }
 
-    private Conversation getConversation(WindowContextManager windowContextManager, Bean<?> bean)
+    protected ConversationConfig getConversationConfig()
+    {
+        return getOrCreateScopedInstanceOfBeanByClass(ConfigResolver.class).resolve(JsfAwareWindowContextConfig.class);
+    }
+
+    private EditableConversation getConversation(EditableWindowContextManager windowContextManager, Bean<?> bean)
     {
         Class conversationGroup = ConversationUtils.getConversationGroup(bean);
 

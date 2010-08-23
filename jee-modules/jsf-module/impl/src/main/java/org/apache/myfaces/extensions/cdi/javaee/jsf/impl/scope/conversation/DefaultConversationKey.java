@@ -19,7 +19,6 @@
 package org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation;
 
 import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.ConversationKey;
-import org.apache.myfaces.extensions.cdi.core.api.tools.annotate.DefaultAnnotation;
 import org.apache.myfaces.extensions.cdi.core.api.scope.conversation.WindowScoped;
 import org.apache.myfaces.extensions.cdi.core.api.scope.conversation.ViewAccessScoped;
 import org.apache.myfaces.extensions.cdi.core.api.scope.conversation.ConversationGroup;
@@ -30,9 +29,7 @@ import javax.inject.Named;
 import java.lang.annotation.Annotation;
 import java.util.Set;
 import java.util.HashSet;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 
 /**
  * @author Gerhard Petracek
@@ -47,82 +44,54 @@ class DefaultConversationKey implements ConversationKey
     private static final String INVALID_VIEW_ACCESS_SCOPE_DEFINITION =
             ": It isn't allowed to use qualifiers in combination with " + WindowScoped.class.getName();
 
-    private final Class<?> groupKey;
-    private final Set<Annotation> qualifiers = new HashSet<Annotation>();
-
-    //TODO remove as soon as the new version is tested
-    //old version
-    //workaround
-    //private static final ViewAccessScoped VIEW_ACCESS_SCOPED = DefaultAnnotation.of(ViewAccessScoped.class);
-    private static final Default DEFAULT_QUALIFIER = DefaultAnnotation.of(Default.class);
+    private Class<?> groupKey;
+    private Set<Annotation> qualifiers;
 
     //workaround
     private boolean viewAccessScopedAnnotationPresent;
 
-    DefaultConversationKey(Class<?> groupKey, Annotation... qualifiers)
+    DefaultConversationKey(Class<?> groupKey, boolean validateKey, Annotation... qualifiers)
     {
         this.groupKey = groupKey;
 
-        this.qualifiers.addAll(Arrays.asList(qualifiers));
-
-        Iterator<Annotation> qualifierIterator = this.qualifiers.iterator();
-
-        Annotation qualifier;
-
         //TODO maybe we have to add a real qualifier instead
-        while(qualifierIterator.hasNext())
+        Class<? extends Annotation> annotationType;
+        for(Annotation qualifier : qualifiers)
         {
-            qualifier = qualifierIterator.next();
+            annotationType = qualifier.annotationType();
 
-            if(ViewAccessScoped.class.isAssignableFrom(qualifier.annotationType()))
+            if(ViewAccessScoped.class.isAssignableFrom(annotationType))
             {
-                qualifierIterator.remove();
                 this.viewAccessScopedAnnotationPresent = true;
             }
-            else if(ConversationGroup.class.isAssignableFrom(qualifier.annotationType()))
+            else if(Any.class.isAssignableFrom(annotationType) ||
+                    Default.class.isAssignableFrom(annotationType) ||
+                    Named.class.isAssignableFrom(annotationType)   ||
+                    ConversationGroup.class.isAssignableFrom(annotationType))
             {
-                //TODO test with injection into other beans
-                qualifierIterator.remove();
+                //won't be used for this key!
             }
-            else if(Any.class.isAssignableFrom(qualifier.annotationType()))
+            else
             {
-                //TODO test with injection into other beans
-                qualifierIterator.remove();
-            }
-            else if(Default.class.isAssignableFrom(qualifier.annotationType()))
-            {
-                //TODO test with injection into other beans
-                qualifierIterator.remove();
-            }
-            else if(Named.class.isAssignableFrom(qualifier.annotationType()))
-            {
-                if("".equals(((Named)qualifier).value()))
+                if (this.qualifiers == null)
                 {
-                    //TODO test with injection into other beans
-                    qualifierIterator.remove();
+                    this.qualifiers = new HashSet<Annotation>();
                 }
+                this.qualifiers.add(qualifier);
             }
         }
 
-        /*
-        //TODO remove as soon as the new version is tested
-        //old version
-        if(this.qualifiers.contains(VIEW_ACCESS_SCOPED))
+        //X TODO drop and move validation to deploy time!
+        if(validateKey)
         {
-            this.qualifiers.remove(VIEW_ACCESS_SCOPED);
-            this.viewAccessScopedAnnotationPresent = true;
+            validate();
         }
-        */
-
-        //for easier manual usage of the WindowContextManager
-        if(this.qualifiers.isEmpty())
-        {
-            this.qualifiers.add(DEFAULT_QUALIFIER);
-        }
-
-        validate();
     }
 
+
+    /**
+     * @deprecated TODO this must be validated at deploy time instead !
+     */
     private void validate()
     {
         boolean defaultQualifierUsed = isDefaultQualifier();
@@ -156,6 +125,11 @@ class DefaultConversationKey implements ConversationKey
 
     private boolean isDefaultQualifier()
     {
+        if (qualifiers == null)
+        {
+            return true;
+        }
+
         for(Annotation qualifier : this.qualifiers)
         {
             if(Default.class.isAssignableFrom(qualifier.getClass()))
@@ -173,6 +147,10 @@ class DefaultConversationKey implements ConversationKey
 
     public Set<Annotation> getQualifiers()
     {
+        if (qualifiers == null)
+        {
+            return Collections.EMPTY_SET;
+        }
         return Collections.unmodifiableSet(this.qualifiers);
     }
 
@@ -194,6 +172,15 @@ class DefaultConversationKey implements ConversationKey
         {
             return false;
         }
+        if (qualifiers == null && that.qualifiers == null)
+        {
+            return true;
+        }
+        if (qualifiers != null && that.qualifiers == null)
+        {
+            return false;
+        }
+
         if (!qualifiers.equals(that.qualifiers))
         {
             return false;
@@ -206,7 +193,10 @@ class DefaultConversationKey implements ConversationKey
     public int hashCode()
     {
         int result = groupKey.hashCode();
-        result = 31 * result + qualifiers.hashCode();
+        if (qualifiers != null)
+        {
+            result = 31 * result + qualifiers.hashCode();
+        }
         return result;
     }
 }

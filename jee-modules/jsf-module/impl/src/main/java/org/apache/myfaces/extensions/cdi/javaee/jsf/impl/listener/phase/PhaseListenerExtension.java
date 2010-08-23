@@ -28,19 +28,28 @@ import javax.enterprise.inject.spi.ProcessAnnotatedType;
 import javax.faces.event.PhaseListener;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
+ * The PhaseListenerExtension picks up all {@link JsfPhaseListener} annotated
+ * beans for later registration as PhaseListeners.
+ * We have to maintain this separately for each ContextClassLoader since it
+ * is possible that multiple WebApps start up in parallel.
  * @author Gerhard Petracek
  */
 public class PhaseListenerExtension implements Extension
 {
-    private static List<PhaseListener> phaseListeners = new CopyOnWriteArrayList<PhaseListener>();
+    private static Map<ClassLoader, List<PhaseListener>> phaseListeners = 
+            new ConcurrentHashMap<ClassLoader,List<PhaseListener>>();
 
     public void filterJsfPhaseListeners(@Observes ProcessAnnotatedType processAnnotatedType)
     {
         if (processAnnotatedType.getAnnotatedType().isAnnotationPresent(JsfPhaseListener.class))
         {
+            //TODO check config if phase-listener is deactivated
             addPhaseListener(processAnnotatedType);
 
             processAnnotatedType.veto();
@@ -57,9 +66,23 @@ public class PhaseListenerExtension implements Extension
         }
         catch (IllegalStateException e)
         {
-            //current workaround some servers
-            phaseListeners.add(newPhaseListener);
+            // current workaround some servers
+            addPhaseListener(newPhaseListener);
         }
+    }
+
+    private void addPhaseListener(PhaseListener newPhaseListener)
+    {
+        ClassLoader cl = ClassUtils.getClassLoader(null);
+
+        List<PhaseListener> plList = phaseListeners.get(cl);
+
+        if (plList == null)
+        {
+            plList = new CopyOnWriteArrayList<PhaseListener>();
+            phaseListeners.put(cl, plList);
+        }
+        plList.add(newPhaseListener);
     }
 
     private PhaseListener createPhaseListenerInstance(ProcessAnnotatedType processAnnotatedType)
@@ -71,9 +94,16 @@ public class PhaseListenerExtension implements Extension
     //current workaround some servers
     public static List<PhaseListener> consumePhaseListeners()
     {
-        List<PhaseListener> result = new ArrayList<PhaseListener>(phaseListeners.size());
-        result.addAll(phaseListeners);
-        phaseListeners.clear();
-        return result;
+        ClassLoader cl = ClassUtils.getClassLoader(null);
+        List<PhaseListener> plList = phaseListeners.get(cl);
+
+        if(plList != null && ! plList.isEmpty())
+        {
+            List<PhaseListener> result = new ArrayList<PhaseListener>(plList.size());
+            result.addAll(plList);
+            plList.clear();
+            return result;
+        }
+        return Collections.emptyList();
     }
 }

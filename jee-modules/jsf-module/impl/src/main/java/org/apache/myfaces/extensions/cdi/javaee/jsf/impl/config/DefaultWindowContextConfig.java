@@ -20,19 +20,30 @@ package org.apache.myfaces.extensions.cdi.javaee.jsf.impl.config;
 
 import org.apache.myfaces.extensions.cdi.core.api.config.Config;
 import org.apache.myfaces.extensions.cdi.core.api.scope.conversation.WindowContextConfig;
+import org.apache.myfaces.extensions.cdi.core.api.projectstage.ProjectStage;
+import org.apache.myfaces.extensions.cdi.core.impl.utils.CodiUtils;
 import static org.apache.myfaces.extensions.cdi.javaee.jsf.api.ConfigParameter.*;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.DefaultWindowHandler;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.JsfAwareWindowContextConfig;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.WindowContextFactory;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.WindowContextManagerFactory;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.WindowHandler;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.ConversationFactory;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.WindowContextQuotaHandler;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.JsfAwareConversationFactory;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.DefaultWindowContextQuotaHandler;
 
 import javax.enterprise.context.Dependent;
+import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.faces.context.FacesContext;
 import javax.inject.Named;
-import javax.inject.Singleton;
 
 /**
  * @author Gerhard Petracek
  */
-@Singleton
-public class DefaultWindowContextConfig extends WindowContextConfig
+@ApplicationScoped
+public class DefaultWindowContextConfig extends JsfAwareWindowContextConfig
 {
     private static final long serialVersionUID = -1065123725125153533L;
 
@@ -42,9 +53,9 @@ public class DefaultWindowContextConfig extends WindowContextConfig
     @Named
     @Dependent
     @Config(WindowContextConfig.class)
-    public boolean getRequestParameterSupported()
+    public boolean getUrlParameterSupported()
     {
-        return isGetRequestParameterSupported();
+        return isUrlParameterSupported();
     }
 
     @Produces
@@ -65,10 +76,24 @@ public class DefaultWindowContextConfig extends WindowContextConfig
         return getConversationTimeoutInMinutes();
     }
 
-    public boolean isGetRequestParameterSupported()
+    //TODO <- add methods for all config parameters ->
+
+    public boolean isUrlParameterSupported()
     {
         lazyInit();
-        return getAttribute(GET_REQUEST_PARAMETER_ENABLED, Boolean.class);
+        return getAttribute(URL_PARAMETER_ENABLED, Boolean.class);
+    }
+
+    public boolean isUnknownWindowIdsAllowed()
+    {
+        lazyInit();
+        return getAttribute(ALLOW_UNKNOWN_WINDOW_IDS, Boolean.class);
+    }
+
+    public boolean isAddWindowIdToActionUrlsEnabled()
+    {
+        lazyInit();
+        return getAttribute(ADD_WINDOW_ID_TO_ACTION_URL_ENABLED, Boolean.class);
     }
 
     public int getWindowContextTimeoutInMinutes()
@@ -80,18 +105,78 @@ public class DefaultWindowContextConfig extends WindowContextConfig
     public int getConversationTimeoutInMinutes()
     {
         lazyInit();
-        return getAttribute(GROUPED_CONVERSATION_TIMEOUT, Integer.class);
+        return getAttribute(CONVERSATION_TIMEOUT, Integer.class);
+    }
+
+    public boolean isScopeBeanEventEnable()
+    {
+        lazyInit();
+        return getAttribute(ENABLE_SCOPE_BEAN_EVENT, Boolean.class);
+    }
+
+    public boolean isBeanAccessEventEnable()
+    {
+        lazyInit();
+        return getAttribute(ENABLE_BEAN_ACCESS_EVENT, Boolean.class);
+    }
+
+    public boolean isUnscopeBeanEventEnable()
+    {
+        lazyInit();
+        return getAttribute(ENABLE_UNSCOPE_BEAN_EVENT, Boolean.class);
+    }
+
+    public int getMaxWindowContextCount()
+    {
+        lazyInit();
+        return getAttribute(MAX_WINDOW_CONTEXT_COUNT, Integer.class);
+    }
+
+    public boolean isInitialRedirectDisable()
+    {
+        lazyInit();
+        return getAttribute(DISABLE_INITIAL_REDIRECT, Boolean.class);
+    }
+
+    public ConversationFactory getConversationFactory()
+    {
+        lazyInit();
+        return getAttribute(ConversationFactory.class.getName(), ConversationFactory.class);
+    }
+
+    public WindowContextFactory getWindowContextFactory()
+    {
+        lazyInit();
+        return getAttribute(WindowContextFactory.class.getName(), WindowContextFactory.class);
+    }
+
+    public WindowContextManagerFactory getWindowContextManagerFactory()
+    {
+        lazyInit();
+        return getAttribute(WindowContextManagerFactory.class.getName(), WindowContextManagerFactory.class);
+    }
+
+    public WindowContextQuotaHandler getWindowContextQuotaHandler()
+    {
+        lazyInit();
+        return getAttribute(WindowContextQuotaHandler.class.getName(), WindowContextQuotaHandler.class);
+    }
+
+    public WindowHandler getWindowHandler()
+    {
+        lazyInit();
+        return getAttribute(WindowHandler.class.getName(), WindowHandler.class);
     }
 
     private void lazyInit()
     {
         if (configInitialized == null)
         {
-            init(FacesContext.getCurrentInstance());
+            init(FacesContext.getCurrentInstance(), CodiUtils.getCurrentProjectStage());
         }
     }
 
-    private synchronized void init(FacesContext facesContext)
+    private synchronized void init(FacesContext facesContext, ProjectStage currentProjectStage)
     {
         if (configInitialized != null || facesContext == null)
         {
@@ -100,78 +185,170 @@ public class DefaultWindowContextConfig extends WindowContextConfig
 
         configInitialized = true;
 
-        initGetRequestParameterEnabled(facesContext);
-        initWindowContextConversationTimeout(facesContext);
-        initGroupedConversationTimeout(facesContext);
+        initUrlParameterEnabled(facesContext);
+        initAllowUnknownWindowIds(facesContext);
+        initMaxWindowContextCount(facesContext, ProjectStage.SystemTest.equals(currentProjectStage));
+        initWindowContextTimeout(facesContext);
+        initConversationTimeout(facesContext);
+        initDisableInitialRedirect(facesContext);
+        initConversatonEvents(facesContext);
+        initActionUrlEncoding(facesContext);
+
+        //init custom implementations
+        initWindowContextManagerFactory(facesContext);
+        initWindowContextFactory(facesContext);
+        initConversationFactory(facesContext);
+        initWindowContextQuotaHandler(facesContext);
+        initWindowHandler(facesContext);
     }
 
-    private void initGetRequestParameterEnabled(FacesContext facesContext)
+    private void initUrlParameterEnabled(FacesContext facesContext)
     {
-        boolean requestParameterEnabled = GET_REQUEST_PARAMETER_ENABLED_DEFAULT;
-
-        String requestParameterEnabledString =
-                facesContext.getExternalContext().getInitParameter(GET_REQUEST_PARAMETER_ENABLED);
-
-        if (requestParameterEnabledString == null)
-        {
-            setAttribute(GET_REQUEST_PARAMETER_ENABLED, requestParameterEnabled);
-            return;
-        }
-
-        requestParameterEnabledString = requestParameterEnabledString.trim();
-
-        if ("".equals(requestParameterEnabledString))
-        {
-            setAttribute(GET_REQUEST_PARAMETER_ENABLED, requestParameterEnabled);
-            return;
-        }
-
-        setAttribute(GET_REQUEST_PARAMETER_ENABLED, Boolean.parseBoolean(requestParameterEnabledString));
+        initConfig(facesContext, URL_PARAMETER_ENABLED, new BooleanConfigValueParser(), URL_PARAMETER_ENABLED_DEFAULT);
     }
 
-    private void initWindowContextConversationTimeout(FacesContext facesContext)
+    private void initAllowUnknownWindowIds(FacesContext facesContext)
     {
-        int timeoutInMinutes = WINDOW_CONTEXT_TIMEOUT_DEFAULT;
-
-        String timeoutString = facesContext.getExternalContext().getInitParameter(WINDOW_CONTEXT_TIMEOUT);
-
-        if (timeoutString == null)
-        {
-            setAttribute(WINDOW_CONTEXT_TIMEOUT, timeoutInMinutes);
-            return;
-        }
-
-        timeoutString = timeoutString.trim();
-
-        if ("".equals(timeoutString))
-        {
-            setAttribute(WINDOW_CONTEXT_TIMEOUT, timeoutInMinutes);
-            return;
-        }
-
-        setAttribute(WINDOW_CONTEXT_TIMEOUT, Integer.parseInt(timeoutString));
+        initConfig(facesContext,
+                ALLOW_UNKNOWN_WINDOW_IDS, new BooleanConfigValueParser(), ALLOW_UNKNOWN_WINDOW_IDS_DEFAULT);
     }
 
-    private void initGroupedConversationTimeout(FacesContext facesContext)
+    private void initMaxWindowContextCount(FacesContext facesContext, boolean inProjectStageSystemTest)
     {
-        int timeoutInMinutes = GROUPED_CONVERSATION_TIMEOUT_DEFAULT;
+        int defaultMaxCount = MAX_WINDOW_CONTEXT_COUNT_DEFAULT;
 
-        String timeoutString = facesContext.getExternalContext().getInitParameter(GROUPED_CONVERSATION_TIMEOUT);
-
-        if (timeoutString == null)
+        if(inProjectStageSystemTest)
         {
-            setAttribute(GROUPED_CONVERSATION_TIMEOUT, timeoutInMinutes);
+            defaultMaxCount = Integer.MAX_VALUE;
+        }
+
+        initConfig(facesContext, MAX_WINDOW_CONTEXT_COUNT, new IntegerConfigValueParser(), defaultMaxCount);
+    }
+
+    private void initWindowContextTimeout(FacesContext facesContext)
+    {
+        initConfig(facesContext,
+                WINDOW_CONTEXT_TIMEOUT, new IntegerConfigValueParser(), WINDOW_CONTEXT_TIMEOUT_DEFAULT);
+    }
+
+    private void initConversationTimeout(FacesContext facesContext)
+    {
+        initConfig(facesContext, CONVERSATION_TIMEOUT, new IntegerConfigValueParser(), CONVERSATION_TIMEOUT_DEFAULT);
+    }
+
+    private void initDisableInitialRedirect(FacesContext facesContext)
+    {
+        initConfig(facesContext,
+                DISABLE_INITIAL_REDIRECT, new BooleanConfigValueParser(), DISABLE_INITIAL_REDIRECT_DEFAULT);
+    }
+
+    private void initConversatonEvents(FacesContext facesContext)
+    {
+        initScopeBeanEvent(facesContext);
+        initBeanAccessEvent(facesContext);
+        initUnscopeBeanEvent(facesContext);
+    }
+
+    private void initScopeBeanEvent(FacesContext facesContext)
+    {
+        initConfig(facesContext,
+                ENABLE_SCOPE_BEAN_EVENT, new BooleanConfigValueParser(), ENABLE_SCOPE_BEAN_EVENT_DEFAULT);
+    }
+
+    private void initBeanAccessEvent(FacesContext facesContext)
+    {
+        initConfig(facesContext,
+                ENABLE_BEAN_ACCESS_EVENT, new BooleanConfigValueParser(), ENABLE_BEAN_ACCESS_EVENT_DEFAULT);
+    }
+
+    private void initUnscopeBeanEvent(FacesContext facesContext)
+    {
+        initConfig(facesContext,
+                ENABLE_UNSCOPE_BEAN_EVENT, new BooleanConfigValueParser(), ENABLE_UNSCOPE_BEAN_EVENT_DEFAULT);
+    }
+
+    private void initActionUrlEncoding(FacesContext facesContext)
+    {
+        initConfig(facesContext,
+                ADD_WINDOW_ID_TO_ACTION_URL_ENABLED,
+                new BooleanConfigValueParser(),
+                ADD_WINDOW_ID_TO_ACTION_URL_ENABLED_DEFAULT);
+    }
+
+    /*
+     * custom implementations
+     */
+    private void initWindowContextManagerFactory(FacesContext facesContext)
+    {
+        initConfig(facesContext,
+                   WindowContextManagerFactory.class.getName(),
+                   new CustomImplementationParser<WindowContextManagerFactory>(),
+                   null);
+    }
+
+    private void initWindowContextFactory(FacesContext facesContext)
+    {
+        initConfig(facesContext,
+                   WindowContextFactory.class.getName(),
+                   new CustomImplementationParser<WindowContextFactory>(),
+                   null);
+    }
+
+    private void initConversationFactory(FacesContext facesContext)
+    {
+        initConfig(facesContext,
+                   ConversationFactory.class.getName(),
+                   new CustomImplementationParser<ConversationFactory>(),
+                   new JsfAwareConversationFactory());
+    }
+
+    private void initWindowContextQuotaHandler(FacesContext facesContext)
+    {
+        initConfig(facesContext,
+                   WindowContextQuotaHandler.class.getName(),
+                   new CustomImplementationParser<WindowContextQuotaHandler>(),
+                   new DefaultWindowContextQuotaHandler(getMaxWindowContextCount()));
+    }
+
+    private void initWindowHandler(FacesContext facesContext)
+    {
+        initConfig(facesContext,
+                   WindowHandler.class.getName(),
+                   new CustomImplementationParser<WindowHandler>(),
+                   new DefaultWindowHandler(isUrlParameterSupported())
+                   {
+                       private static final long serialVersionUID = 7376499174252256735L;
+                   });
+    }
+
+    protected <T> void initConfig(FacesContext facesContext,
+                                  String configKey,
+                                  ConfigValueParser<T> configValueParser,
+                                  T defaultValue)
+    {
+        String customValue = facesContext.getExternalContext().getInitParameter(configKey);
+
+        if (customValue == null)
+        {
+            setAttribute(configKey, defaultValue);
             return;
         }
 
-        timeoutString = timeoutString.trim();
+        customValue = customValue.trim();
 
-        if ("".equals(timeoutString))
+        if ("".equals(customValue))
         {
-            setAttribute(GROUPED_CONVERSATION_TIMEOUT, timeoutInMinutes);
+            setAttribute(configKey, defaultValue);
             return;
         }
 
-        setAttribute(GROUPED_CONVERSATION_TIMEOUT, Integer.parseInt(timeoutString));
+        if(configValueParser == null)
+        {
+            setAttribute(configKey, customValue);
+        }
+        else
+        {
+            setAttribute(configKey, configValueParser.parse(customValue));
+        }
     }
 }

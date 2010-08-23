@@ -27,34 +27,11 @@ import java.io.Serializable;
  */
 public interface WindowContextManager extends Serializable
 {
-    String WINDOW_CONTEXT_ID_PARAMETER_KEY = "windowContextId";
+    String WINDOW_CONTEXT_MANAGER_BEAN_NAME = "windowContextManager";
+
+    String WINDOW_CONTEXT_ID_PARAMETER_KEY = "windowId";
 
     WindowContext getCurrentWindowContext();
 
-    WindowContext getWindowContext(long windowContextId);
-
-    @Deprecated
-    void activateWindowContext(long windowContextId);
-
-    @Deprecated
-    void activateWindowContext(WindowContext windowContext);
-
-    void resetCurrentWindowContext();
-
-    void resetWindowContext(long id);
-
-    void resetWindowContext(WindowContext windowContext);
-
-    //TODO
-    void resetConversations();
-
-    void resetConversations(long windowContextId);
-
-    void resetConversations(WindowContext windowContext);
-
-    void removeCurrentWindowContext();
-
-    void removeWindowContext(long id);
-
-    void removeWindowContext(WindowContext windowContext);
+    WindowContext getWindowContext(String windowContextId);
 }

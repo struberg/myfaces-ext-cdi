@@ -19,413 +19,69 @@
 package org.apache.myfaces.extensions.cdi.javaee.jsf2.impl.scope.conversation;
 
 import static org.apache.myfaces.extensions.cdi.javaee.jsf.impl.util.ConversationUtils.*;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.WindowHandler;
+import org.apache.myfaces.extensions.cdi.javaee.jsf.impl.scope.conversation.spi.JsfAwareWindowContextConfig;
+import org.apache.myfaces.extensions.cdi.core.impl.utils.CodiUtils;
+import org.apache.myfaces.extensions.cdi.core.api.resolver.ConfigResolver;
 
 import javax.faces.context.ExternalContext;
-import javax.faces.context.Flash;
-import java.net.URL;
-import java.net.MalformedURLException;
-import java.security.Principal;
-import java.util.Map;
-import java.util.Set;
-import java.util.List;
-import java.util.Locale;
-import java.util.Iterator;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.Writer;
-import java.io.UnsupportedEncodingException;
+import javax.faces.context.ExternalContextWrapper;
 import java.io.IOException;
 
 /**
  * @author Gerhard Petracek
  */
-public class RedirectedConversationAwareExternalContext extends ExternalContext
+public class RedirectedConversationAwareExternalContext extends ExternalContextWrapper
 {
     private final ExternalContext wrapped;
+
+    private WindowHandler windowHandler;
+
+    private boolean encodeActionURLs;
 
     public RedirectedConversationAwareExternalContext(ExternalContext wrapped)
     {
         this.wrapped = wrapped;
     }
 
-    @Override
-    public void addResponseCookie(String s, String s1, Map<String, Object> stringObjectMap)
+    public ExternalContext getWrapped()
     {
-        wrapped.addResponseCookie(s, s1, stringObjectMap);
+        return this.wrapped;
     }
 
     @Override
-    public void addResponseHeader(String s, String s1)
-    {
-        wrapped.addResponseHeader(s, s1);
-    }
-
-    public void dispatch(String s)
+    public void redirect(String url)
             throws IOException
     {
-        wrapped.dispatch(s);
+        lazyInit();
+        sendRedirect(this.wrapped, url, this.windowHandler);
     }
 
     public String encodeActionURL(String s)
     {
-        return wrapped.encodeActionURL(s);
-    }
-
-    @Override
-    public String encodeBookmarkableURL(String s, Map<String, List<String>> stringListMap)
-    {
-        return wrapped.encodeBookmarkableURL(s, stringListMap);
-    }
-
-    public String encodeNamespace(String s)
-    {
-        return wrapped.encodeNamespace(s);
-    }
-
-    @Override
-    public String encodePartialActionURL(String s)
-    {
-        return wrapped.encodePartialActionURL(s);
-    }
-
-    @Override
-    public String encodeRedirectURL(String s, Map<String, List<String>> stringListMap)
-    {
-        return wrapped.encodeRedirectURL(s, stringListMap);
-    }
-
-    public String encodeResourceURL(String s)
-    {
-        return wrapped.encodeResourceURL(s);
-    }
-
-    public Map<String, Object> getApplicationMap()
-    {
-        return wrapped.getApplicationMap();
-    }
-
-    public String getAuthType()
-    {
-        return wrapped.getAuthType();
-    }
-
-    public Object getContext()
-    {
-        return wrapped.getContext();
-    }
-
-    @Override
-    public String getContextName()
-    {
-        return wrapped.getContextName();
-    }
-
-    @Override
-    public Flash getFlash()
-    {
-        return wrapped.getFlash();
-    }
-
-    public String getInitParameter(String s)
-    {
-        return wrapped.getInitParameter(s);
-    }
-
-    public Map getInitParameterMap()
-    {
-        return wrapped.getInitParameterMap();
-    }
-
-    @Override
-    public String getMimeType(String s)
-    {
-        return wrapped.getMimeType(s);
-    }
-
-    @Override
-    public String getRealPath(String s)
-    {
-        return wrapped.getRealPath(s);
-    }
-
-    public String getRemoteUser()
-    {
-        return wrapped.getRemoteUser();
-    }
-
-    public Object getRequest()
-    {
-        return wrapped.getRequest();
-    }
-
-    @Override
-    public String getRequestCharacterEncoding()
-    {
-        return wrapped.getRequestCharacterEncoding();
-    }
-
-    @Override
-    public int getRequestContentLength()
-    {
-        return wrapped.getRequestContentLength();
-    }
-
-    @Override
-    public String getRequestContentType()
-    {
-        return wrapped.getRequestContentType();
-    }
-
-    public String getRequestContextPath()
-    {
-        return wrapped.getRequestContextPath();
-    }
-
-    public Map<String, Object> getRequestCookieMap()
-    {
-        return wrapped.getRequestCookieMap();
-    }
-
-    public Map<String, String> getRequestHeaderMap()
-    {
-        return wrapped.getRequestHeaderMap();
-    }
-
-    public Map<String, String[]> getRequestHeaderValuesMap()
-    {
-        return wrapped.getRequestHeaderValuesMap();
-    }
-
-    public Locale getRequestLocale()
-    {
-        return wrapped.getRequestLocale();
-    }
-
-    public Iterator<Locale> getRequestLocales()
-    {
-        return wrapped.getRequestLocales();
-    }
-
-    public Map<String, Object> getRequestMap()
-    {
-        return wrapped.getRequestMap();
-    }
-
-    public Map<String, String> getRequestParameterMap()
-    {
-        return wrapped.getRequestParameterMap();
-    }
-
-    public Iterator<String> getRequestParameterNames()
-    {
-        return wrapped.getRequestParameterNames();
-    }
-
-    public Map<String, String[]> getRequestParameterValuesMap()
-    {
-        return wrapped.getRequestParameterValuesMap();
-    }
-
-    public String getRequestPathInfo()
-    {
-        return wrapped.getRequestPathInfo();
-    }
-
-    @Override
-    public String getRequestScheme()
-    {
-        return wrapped.getRequestScheme();
-    }
-
-    @Override
-    public String getRequestServerName()
-    {
-        return wrapped.getRequestServerName();
-    }
-
-    public int getRequestServerPort()
-    {
-        return wrapped.getRequestServerPort();
-    }
-
-    public String getRequestServletPath()
-    {
-        return wrapped.getRequestServletPath();
-    }
-
-    public URL getResource(String s)
-            throws MalformedURLException
-    {
-        return wrapped.getResource(s);
-    }
-
-    public InputStream getResourceAsStream(String s)
-    {
-        return wrapped.getResourceAsStream(s);
-    }
-
-    public Set<String> getResourcePaths(String s)
-    {
-        return wrapped.getResourcePaths(s);
-    }
-
-    public Object getResponse()
-    {
-        return wrapped.getResponse();
-    }
-
-    @Override
-    public int getResponseBufferSize()
-    {
-        return wrapped.getResponseBufferSize();
-    }
-
-    @Override
-    public String getResponseCharacterEncoding()
-    {
-        return wrapped.getResponseCharacterEncoding();
-    }
-
-    @Override
-    public String getResponseContentType()
-    {
-        return wrapped.getResponseContentType();
-    }
-
-    @Override
-    public OutputStream getResponseOutputStream()
-            throws IOException
-    {
-        return wrapped.getResponseOutputStream();
-    }
-
-    @Override
-    public Writer getResponseOutputWriter()
-            throws IOException
-    {
-        return wrapped.getResponseOutputWriter();
-    }
-
-    public Object getSession(boolean b)
-    {
-        return wrapped.getSession(b);
-    }
-
-    public Map<String, Object> getSessionMap()
-    {
-        return wrapped.getSessionMap();
-    }
-
-    public Principal getUserPrincipal()
-    {
-        return wrapped.getUserPrincipal();
-    }
-
-    @Override
-    public void invalidateSession()
-    {
-        wrapped.invalidateSession();
-    }
-
-    @Override
-    public boolean isResponseCommitted()
-    {
-        return wrapped.isResponseCommitted();
-    }
-
-    public boolean isUserInRole(String s)
-    {
-        return wrapped.isUserInRole(s);
-    }
-
-    public void log(String s)
-    {
-        wrapped.log(s);
-    }
-
-    public void log(String s, Throwable throwable)
-    {
-        wrapped.log(s, throwable);
-    }
-
-    @Override
-    public void responseFlushBuffer()
-            throws IOException
-    {
-        wrapped.responseFlushBuffer();
-    }
-
-    @Override
-    public void responseReset()
-    {
-        wrapped.responseReset();
-    }
-
-    @Override
-    public void responseSendError(int i, String s)
-            throws IOException
-    {
-        wrapped.responseSendError(i, s);
-    }
-
-    @Override
-    public void setRequest(Object o)
-    {
-        wrapped.setRequest(o);
-    }
-
-    @Override
-    public void setRequestCharacterEncoding(String s)
-            throws UnsupportedEncodingException
-    {
-        wrapped.setRequestCharacterEncoding(s);
-    }
-
-    @Override
-    public void setResponse(Object o)
-    {
-        wrapped.setResponse(o);
-    }
-
-    @Override
-    public void setResponseBufferSize(int i)
-    {
-        wrapped.setResponseBufferSize(i);
-    }
-
-    @Override
-    public void setResponseCharacterEncoding(String s)
-    {
-        wrapped.setResponseCharacterEncoding(s);
-    }
-
-    @Override
-    public void setResponseContentLength(int i)
-    {
-        wrapped.setResponseContentLength(i);
-    }
-
-    @Override
-    public void setResponseContentType(String s)
-    {
-        wrapped.setResponseContentType(s);
-    }
+        lazyInit();
 
-    @Override
-    public void setResponseHeader(String s, String s1)
-    {
-        wrapped.setResponseHeader(s, s1);
+        if(this.encodeActionURLs)
+        {
+            String url = addWindowIdToUrl(s);
+            return this.wrapped.encodeActionURL(url);
+        }
+        return this.wrapped.encodeActionURL(s);
     }
 
-    @Override
-    public void setResponseStatus(int i)
+    private synchronized void lazyInit()
     {
-        wrapped.setResponseStatus(i);
+        if(this.windowHandler == null)
+        {
+            this.windowHandler = getWindowHandler();
+            this.encodeActionURLs = CodiUtils
+                    .getOrCreateScopedInstanceOfBeanByClass(ConfigResolver.class)
+                    .resolve(JsfAwareWindowContextConfig.class).isAddWindowIdToActionUrlsEnabled();
+        }
     }
 
-    public void redirect(String url)
-            throws IOException
+    private String addWindowIdToUrl(String url)
     {
-        sendRedirect(this.wrapped, url);
+        return this.windowHandler.encodeURL(url);
     }
 }

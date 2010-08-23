@@ -39,56 +39,39 @@ class BeanStorage implements Serializable
 
     private Map<Class, BeanEntry<Serializable>> beanMap = new ConcurrentHashMap<Class, BeanEntry<Serializable>>();
 
-    public BeanEntry getBean(Class beanClass)
+    BeanEntry getBean(Class beanClass)
     {
-        synchronized (this)
-        {
-            BeanEntry<Serializable> beanEntry = this.beanMap.get(beanClass);
-
-            if (beanEntry == null)
-            {
-                return null;
-            }
-
-            //don't use something like Bean#touch here to ensure that the correct ViewId is used as well
-            return addBean(this.beanMap, beanEntry);
-        }
+        return this.beanMap.get(beanClass);
     }
 
-    public BeanEntry addBean(BeanEntry<Serializable> beanEntry)
+    BeanEntry addBean(BeanEntry<Serializable> beanEntry)
     {
-        synchronized (this)
-        {
-            return addBean(this.beanMap, beanEntry);
-        }
-    }
-
-    private BeanEntry addBean(Map<Class, BeanEntry<Serializable>> beanMap, BeanEntry<Serializable> beanEntry)
-    {
-        //BeanEntryHolder newBean = new BeanEntryHolder(beanHolder);
         Class beanClass = beanEntry.getBean().getBeanClass();
-        beanMap.remove(beanClass);
-        beanMap.put(beanClass, beanEntry);
-        //this.beanAccessedEventEvent.fire(new BeanAccessedEvent(bean.getBeanInstance()));
+        this.beanMap.remove(beanClass);
+        this.beanMap.put(beanClass, beanEntry);
         return beanEntry;
     }
 
     //TODO don't reset window scoped beans
-    public void resetStorage()
+    void resetStorage()
     {
         Serializable oldBeanInstance;
         for (BeanEntry<Serializable> beanHolder : this.beanMap.values())
         {
             oldBeanInstance = beanHolder.resetBeanInstance();
-            fireUnscopeBeanEvent(oldBeanInstance, beanHolder);
+
+            if(beanHolder.isUnscopeBeanEventEnabled())
+            {
+                fireUnscopeBeanEvent(oldBeanInstance);
+            }
+
+            destroyBean(beanHolder.getCreationalContext(), beanHolder.getBean(), oldBeanInstance);
         }
     }
 
-    private <T extends Serializable> void fireUnscopeBeanEvent(T instance, BeanEntry<T> beanHolder)
+    private <T extends Serializable> void fireUnscopeBeanEvent(T instance)
     {
         getOrCreateBeanManager().fireEvent(new UnscopeBeanEvent(instance));
-
-        destroyBean(beanHolder.getCreationalContext(), beanHolder.getBean(), instance);
     }
 
     private BeanManager getOrCreateBeanManager()

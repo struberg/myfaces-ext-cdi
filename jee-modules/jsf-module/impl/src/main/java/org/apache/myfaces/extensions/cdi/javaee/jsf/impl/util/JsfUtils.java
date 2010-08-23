@@ -18,6 +18,8 @@
  */
 package org.apache.myfaces.extensions.cdi.javaee.jsf.impl.util;
 
+import org.apache.myfaces.extensions.cdi.core.api.util.ClassUtils;
+
 import javax.faces.FactoryFinder;
 import javax.faces.context.FacesContext;
 import javax.faces.application.FacesMessage;
@@ -35,6 +37,16 @@ import java.util.Locale;
  */
 public class JsfUtils
 {
+    public static void resetConversationCache()
+    {
+        RequestCache.resetConversationCache();
+    }
+
+    public static void resetCaches()
+    {
+        RequestCache.resetCache();
+    }
+
     public static void registerPhaseListener(PhaseListener phaseListener)
     {
         LifecycleFactory lifecycleFactory = (LifecycleFactory) FactoryFinder.getFactory(
@@ -67,5 +79,22 @@ public class JsfUtils
         }
 
         return ResourceBundle.getBundle(bundleName, locale);
+    }
+
+    @Deprecated
+    public static <T> T getCustomImplementation(Class<T> targetType)
+    {
+        String className = getWebXmlParameter(targetType.getName());
+
+        if(className != null && !"".equals(className.trim()))
+        {
+            return ClassUtils.tryToInstantiateClassForName(className, targetType);
+        }
+        return null;
+    }
+    
+    public static String getWebXmlParameter(String parameterKey)
+    {
+        return FacesContext.getCurrentInstance().getExternalContext().getInitParameter(parameterKey);
     }
 }

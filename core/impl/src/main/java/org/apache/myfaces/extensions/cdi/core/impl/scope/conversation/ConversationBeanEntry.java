@@ -20,9 +20,14 @@ package org.apache.myfaces.extensions.cdi.core.impl.scope.conversation;
 
 import org.apache.myfaces.extensions.cdi.core.impl.scope.conversation.spi.BeanEntry;
 import static org.apache.myfaces.extensions.cdi.core.impl.utils.CodiUtils.createNewInstanceOfBean;
+import org.apache.myfaces.extensions.cdi.core.api.manager.BeanManagerProvider;
+import org.apache.myfaces.extensions.cdi.core.api.scope.conversation.ScopeBeanEvent;
+import org.apache.myfaces.extensions.cdi.core.api.scope.conversation.BeanAccessEvent;
 
 import javax.enterprise.context.spi.CreationalContext;
 import javax.enterprise.inject.spi.Bean;
+import javax.enterprise.inject.spi.BeanManager;
+import java.io.Serializable;
 
 /**
  * @author Gerhard Petracek
@@ -37,11 +42,24 @@ class ConversationBeanEntry<T> implements BeanEntry<T>
 
     private CreationalContext<T> creationalContext;
 
-    ConversationBeanEntry(CreationalContext<T> creationalContext, Bean<T> bean)
+    private final boolean scopeBeanEventEnable;
+
+    private final boolean beanAccessEventEnable;
+
+    private final boolean unscopeBeanEventEnable;
+
+    ConversationBeanEntry(CreationalContext<T> creationalContext,
+                          Bean<T> bean,
+                          boolean scopeBeanEventEnable,
+                          boolean beanAccessEventEnable,
+                          boolean unscopeBeanEventEnable)
     {
         this.bean = bean;
         this.creationalContext = creationalContext;
-        this.currentBeanInstance = createNewInstanceOfBean(bean, creationalContext);
+
+        this.scopeBeanEventEnable = scopeBeanEventEnable;
+        this.beanAccessEventEnable = beanAccessEventEnable;
+        this.unscopeBeanEventEnable = unscopeBeanEventEnable;
     }
 
     public Bean<T> getBean()
@@ -58,8 +76,16 @@ class ConversationBeanEntry<T> implements BeanEntry<T>
     {
         if (this.currentBeanInstance == null)
         {
-            this.currentBeanInstance = createNewInstanceOfBean(this.creationalContext, this.bean);
+            //in case of a reset
+            createNewBeanInstance();
         }
+
+        if(this.beanAccessEventEnable)
+        {
+            //we don't have to check the implementation of Serializable - cdi already checked it
+            getBeanManager().fireEvent(new BeanAccessEvent((Serializable)this.currentBeanInstance));
+        }
+
         return this.currentBeanInstance;
     }
 
@@ -70,5 +96,41 @@ class ConversationBeanEntry<T> implements BeanEntry<T>
         this.currentBeanInstance = null;
 
         return oldBeanInstance;
+    }
+
+    public boolean isScopeBeanEventEnabled()
+    {
+        return this.scopeBeanEventEnable;
+    }
+
+    public boolean isBeanAccessEventEnabled()
+    {
+        return this.beanAccessEventEnable;
+    }
+
+    public boolean isUnscopeBeanEventEnabled()
+    {
+        return this.unscopeBeanEventEnable;
+    }
+
+    private synchronized void createNewBeanInstance()
+    {
+        if(this.currentBeanInstance != null)
+        {
+            return;
+        }
+        
+        this.currentBeanInstance = createNewInstanceOfBean(this.bean, this.creationalContext);
+
+        if(this.scopeBeanEventEnable)
+        {
+            //we don't have to check the implementation of Serializable - cdi already checked it
+            getBeanManager().fireEvent(new ScopeBeanEvent((Serializable)this.currentBeanInstance));
+        }
+    }
+
+    private BeanManager getBeanManager()
+    {
+        return BeanManagerProvider.getInstance().getBeanManager();
     }
 }

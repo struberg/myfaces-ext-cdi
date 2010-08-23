@@ -22,13 +22,13 @@ import org.apache.myfaces.extensions.cdi.core.api.config.CodiConfig;
 import org.apache.myfaces.extensions.cdi.core.api.config.DeactivatedCodiConfig;
 import org.apache.myfaces.extensions.cdi.core.api.manager.BeanManagerProvider;
 import org.apache.myfaces.extensions.cdi.core.api.resolver.ConfigResolver;
+import org.apache.myfaces.extensions.cdi.core.impl.utils.ApplicationCache;
 
 import javax.enterprise.inject.Produces;
 import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.context.spi.CreationalContext;
 import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Singleton;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Collections;
@@ -37,6 +37,7 @@ import java.util.Arrays;
 /**
  * @author Gerhard Petracek
  */
+@SuppressWarnings({"UnusedDeclaration"})
 public class ConfigProducer
 {
     private static Boolean configInitialized;
@@ -46,7 +47,7 @@ public class ConfigProducer
     private static Set<Class<? extends CodiConfig>> configFilter;
 
     @Produces
-    @Singleton
+    @ApplicationScoped
     public Set<CodiConfig> createCodiConfig()
     {
         if(configInitialized == null)
@@ -63,13 +64,13 @@ public class ConfigProducer
             return; //paranoid mode
         }
 
-        configInitialized = true;
-
         BeanManager beanManager = BeanManagerProvider.getInstance().getBeanManager();
 
         createConfigFilter(beanManager);
 
         createConfig(beanManager);
+
+        configInitialized = true;
     }
 
     @Produces
@@ -78,19 +79,39 @@ public class ConfigProducer
     {
         return new ConfigResolver()
         {
+            private static final long serialVersionUID = -4410313406799415118L;
+
             public <T extends CodiConfig> T resolve(Class<T> targetType)
             {
+                CodiConfig codiConfig = ApplicationCache.getConfig(targetType);
+
+                if(codiConfig != null)
+                {
+                    //noinspection unchecked
+                    return (T)codiConfig;
+                }
+
                 Set<CodiConfig> configs = createCodiConfig();
 
                 for(CodiConfig config : configs)
                 {
                     if(targetType.isAssignableFrom(config.getClass()))
                     {
-                        //noinspection unchecked
-                        return (T)config;
+                        if(!config.getClass().getName().startsWith("org.apache.myfaces.extensions.cdi."))
+                        {
+                            //noinspection unchecked
+                            return (T)config;
+                        }
+                        else
+                        {
+                            codiConfig = config;
+                        }
                     }
                 }
-                return null;
+
+                ApplicationCache.setConfig(targetType, codiConfig);
+                //noinspection unchecked
+                return (T)codiConfig;
             }
         };
     }

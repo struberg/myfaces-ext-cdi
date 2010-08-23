@@ -19,9 +19,9 @@
 package org.apache.myfaces.extensions.cdi.core.impl.scope.conversation;
 
 import org.apache.myfaces.extensions.cdi.core.api.scope.conversation.ConversationScoped;
+import org.apache.myfaces.extensions.cdi.core.api.scope.conversation.ConversationConfig;
 import org.apache.myfaces.extensions.cdi.core.impl.scope.conversation.spi.BeanEntry;
 import org.apache.myfaces.extensions.cdi.core.impl.scope.conversation.spi.WindowContextManager;
-import org.apache.myfaces.extensions.cdi.core.impl.utils.CodiUtils;
 
 import javax.enterprise.context.spi.Context;
 import javax.enterprise.context.spi.Contextual;
@@ -37,9 +37,34 @@ public abstract class AbstractConversationContextAdapter implements Context
 {
     protected BeanManager beanManager;
 
+    private ConversationConfig conversationConfig;
+
+    private boolean scopeBeanEventEnable = false;
+
+    private boolean beanAccessEventEnable = false;
+
+    private boolean unscopeBeanEventEnable = false;
+
+    private static RuntimeException runtimeException = new RuntimeException();
+
+    //workaround for weld
+    private final boolean useFallback;
+
     public AbstractConversationContextAdapter(BeanManager beanManager)
     {
         this.beanManager = beanManager;
+
+        boolean useFallback = true;
+        for(StackTraceElement element : runtimeException.getStackTrace())
+        {
+            if(element.toString().contains("org.apache.webbeans."))
+            {
+                useFallback = false;
+                break;
+            }
+        }
+
+        this.useFallback = useFallback;
     }
 
     /**
@@ -59,19 +84,46 @@ public abstract class AbstractConversationContextAdapter implements Context
     {
         if (component instanceof Bean)
         {
-            WindowContextManager conversationManager = resolveWindowContextManager();
+            //workaround for weld - start
+            if(useFallback)
+            {
+                T scopedBean = get(component);
+
+                if(scopedBean != null)
+                {
+                    return scopedBean;
+                }
+            }
+            //workaround for weld - end
+
+            lazyInitConversationConfig();
+
+            WindowContextManager windowContextManager = resolveWindowContextManager();
 
             Bean<T> bean = ((Bean<T>) component);
 
-            BeanEntry<T> beanEntry = new ConversationBeanEntry<T>(creationalContext, bean);
+            BeanEntry<T> beanEntry = new ConversationBeanEntry<T>(creationalContext, bean,
+                    this.scopeBeanEventEnable, this.beanAccessEventEnable, this.unscopeBeanEventEnable);
 
-            scopeBeanEntry(conversationManager, beanEntry);
+            scopeBeanEntry(windowContextManager, beanEntry);
 
             return beanEntry.getBeanInstance();
         }
 
         Class invalidComponentClass = component.create(creationalContext).getClass();
         throw new IllegalStateException(invalidComponentClass + " is no valid conversation scoped bean");
+    }
+
+    private void lazyInitConversationConfig()
+    {
+        if(this.conversationConfig == null)
+        {
+            this.conversationConfig = getConversationConfig();
+
+            this.scopeBeanEventEnable = this.conversationConfig.isScopeBeanEventEnable();
+            this.beanAccessEventEnable = this.conversationConfig.isBeanAccessEventEnable();
+            this.unscopeBeanEventEnable = this.conversationConfig.isUnscopeBeanEventEnable();
+        }
     }
 
     /**
@@ -98,36 +150,27 @@ public abstract class AbstractConversationContextAdapter implements Context
      * @return an instance of a custom (the default)
      * {@link org.apache.myfaces.extensions.cdi.core.impl.scope.conversation.spi.WindowContextManager}
      */
-    private WindowContextManager resolveWindowContextManager()
-    {
-        Bean<WindowContextManager> windowContextManagerBean = resolveWindowContextManagerBean();
-        return CodiUtils.getOrCreateScopedInstanceOfBean(windowContextManagerBean);
-
-        //TODO cleanup:
-        //return (WindowContextManager)this.beanManager.getReference(
-        //windowContextManagerBean, ConversationManager.class,
-        //getConversationManagerCreationalContextFor(windowContextManagerBean));
-    }
-
-    protected abstract Bean<WindowContextManager> resolveWindowContextManagerBean();
+    protected abstract WindowContextManager resolveWindowContextManager();
 
     /**
-     * @param conversationManager the current
+     * @param windowContextManager the current
      * {@link org.apache.myfaces.extensions.cdi.core.impl.scope.conversation.spi.WindowContextManager}
      * @param beanDescriptor      descriptor of the requested bean
      * @return the instance of the requested bean if it exists in the current
      *         {@link org.apache.myfaces.extensions.cdi.core.api.scope.conversation.WindowContext}
      *         null otherwise
      */
-    protected abstract <T> T resolveBeanInstance(WindowContextManager conversationManager, Bean<T> beanDescriptor);
+    protected abstract <T> T resolveBeanInstance(WindowContextManager windowContextManager, Bean<T> beanDescriptor);
 
     /**
      * Store the given bean in the
      * {@link org.apache.myfaces.extensions.cdi.core.api.scope.conversation.WindowContext}
      *
-     * @param conversationManager current
+     * @param windowContextManager current
      * {@link org.apache.myfaces.extensions.cdi.core.impl.scope.conversation.spi.WindowContextManager}
      * @param beanEntry           current bean-entry
      */
-    protected abstract <T> void scopeBeanEntry(WindowContextManager conversationManager, BeanEntry<T> beanEntry);
+    protected abstract <T> void scopeBeanEntry(WindowContextManager windowContextManager, BeanEntry<T> beanEntry);
+
+    protected abstract ConversationConfig getConversationConfig();
 }
